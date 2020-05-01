@@ -1,7 +1,8 @@
-// import AppError from '../errors/AppError';
+import { getRepository, getCustomRepository } from 'typeorm';
+import AppError from '../errors/AppError';
 
-import { getRepository } from 'typeorm';
 import Transaction from '../models/Transaction';
+import TransactionRepository from '../repositories/TransactionsRepository';
 import Category from '../models/Category';
 
 interface Request {
@@ -18,8 +19,16 @@ class CreateTransactionService {
     type,
     category,
   }: Request): Promise<Transaction> {
-    const transactionRepository = getRepository(Transaction);
+    const transactionRepository = getCustomRepository(TransactionRepository);
     const categoryRepository = getRepository(Category);
+
+    const balance = await transactionRepository.getBalance();
+
+    if (type === 'outcome' && value > balance.total) {
+      throw new AppError(
+        'You dont have enough money to make this transaction.',
+      );
+    }
 
     let findCategory = await categoryRepository.findOne({
       where: { title: category },
